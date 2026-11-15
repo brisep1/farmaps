@@ -48,6 +48,32 @@
     </main>
   </div>
 
+  <dialog id="reporte" aria-labelledby="rTitulo">
+    <form id="rForm">
+      <h2 id="rTitulo">Cuéntanos qué viste</h2>
+      <p class="lema">Tu aviso nos ayuda a corregir precios para todos. No pedimos tus datos.</p>
+      <label for="rProducto">Producto</label>
+      <select id="rProducto" required></select>
+      <label for="rTipo">¿Qué pasó?</label>
+      <select id="rTipo">
+        <option value="precio_distinto">El precio era distinto</option>
+        <option value="sin_stock">No había stock</option>
+        <option value="otro">Otra cosa</option>
+      </select>
+      <div id="rPrecioCampo">
+        <label for="rPrecio">Precio que viste ($)</label>
+        <input id="rPrecio" inputmode="numeric" placeholder="Ej: 1290">
+      </div>
+      <label for="rComentario">Comentario (opcional)</label>
+      <textarea id="rComentario" rows="2" maxlength="300" placeholder="Ej: en el local de Av. Matta"></textarea>
+      <p id="rEstado" role="status"></p>
+      <div class="fila">
+        <button type="button" id="rCancelar" class="secundario">Cancelar</button>
+        <button type="submit" id="rEnviar">Enviar</button>
+      </div>
+    </form>
+  </dialog>
+
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script src="config.js"></script>
   <script src="app.js"></script>

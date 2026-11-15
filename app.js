@@ -45,11 +45,12 @@
       body: cuerpo ? JSON.stringify(cuerpo) : undefined,
     });
     if (!r.ok) throw new Error("Error " + r.status + " al consultar los datos");
-    return r.json();
+    return r.status === 204 ? null : r.json();
   }
 
   const distancia = (m) => (m < 1000 ? Math.round(m / 10) * 10 + " m" : (m / 1000).toFixed(1).replace(".", ",") + " km");
   const hora = (iso) => new Date(iso).toLocaleTimeString("es-CL", { hour: "2-digit", minute: "2-digit", hour12: false });
+  const haceDias = (n) => new Date(Date.now() - n * 864e5).toISOString().slice(0, 10);
   const comoLlegar = (l) => "https://www.google.com/maps/dir/?api=1&destination=" + l.latitud + "," + l.longitud;
 
   // ---------- mapa ----------
@@ -110,6 +111,7 @@
     if (!locales.length) {
       caja.append(el("p", { class: "vacio" },
         soloTurno ? "No encontramos farmacias de turno" + (estado.cadena ? " de esta cadena" : "") + " cerca. Prueba quitando el filtro."
+        : estado.cadena ? "No tenemos locales de " + estado.cadena + " en el mapa. Puede que venda solo por internet: revisa su sitio antes de ir."
                   : "No encontramos locales cerca de este punto."));
       return;
     }
@@ -150,14 +152,22 @@
   async function buscar(q) {
     const caja = $("resultados");
     caja.replaceChildren(el("p", { class: "vacio" }, "Buscando…"));
-    let filas;
+    let filas, otros;
+    const termino = encodeURIComponent(q.replace(/[*%,()]/g, " ").trim());
     try {
-      filas = await api("comparador?select=*&principio_activo=ilike.*" + encodeURIComponent(q.replace(/[*%,()]/g, " ").trim()) + "*&order=precio.asc&limit=300");
+      [filas, otros] = await Promise.all([
+        api("comparador?select=*&principio_activo=ilike.*" + termino + "*&fecha=gte." + haceDias(4) + "&order=precio.asc&limit=500"),
+        api("catalogo?select=*&producto=ilike.*" + termino + "*&medicamento_id=is.null&fecha=gte." + haceDias(4) + "&order=precio.asc&limit=200"),
+      ]);
     } catch (e) { caja.replaceChildren(); return aviso(e.message); }
 
     caja.replaceChildren(el("h2", {}, "Precios"));
-    if (!filas.length) {
-      caja.append(el("p", { class: "vacio" }, "Aún no tenemos precios para “" + q + "”. Por ahora hay pocos medicamentos cargados."));
+    if (filas.length || otros.length) {
+      const ultima = filas.concat(otros).reduce((a, f) => (f.fecha > a ? f.fecha : a), "");
+      caja.append(el("p", { class: "fecha" }, "Precios web revisados el " + ultima.split("-").reverse().join("-") + "."));
+    }
+    if (!filas.length && !otros.length) {
+      caja.append(el("p", { class: "vacio" }, "Aún no tenemos precios para “" + q + "”. Prueba con el principio activo (por ejemplo, losartán en vez de la marca)."));
       return;
     }
 
@@ -169,32 +179,95 @@
     const orden = [...grupos.values()].sort((a, b) =>
       new Set(b.map((x) => x.cadena)).size - new Set(a.map((x) => x.cadena)).size || a[0].mg - b[0].mg || a[0].unidades - b[0].unidades);
 
+    const fila = (f, destacada, ahorro) => el("button", {
+      class: "cadena" + (destacada ? " barata" : ""), type: "button", "data-cadena": f.cadena,
+      title: "Ver locales de " + f.cadena + " en el mapa",
+      onclick: () => elegirCadena(f.cadena),
+    },
+      el("span", { class: "nombre" },
+        el("span", { class: "punto", style: "background:" + (COLORES[f.cadena] || GRIS) }),
+        f.cadena,
+        destacada ? el("span", { class: "etiqueta" }, "Más barato") : null,
+        f.bioequivalente ? el("span", { class: "etiqueta bioeq", title: "Bioequivalente según la farmacia" }, "Bioequivalente") : null,
+        f.receta ? el("span", { class: "etiqueta receta", title: "Requiere receta médica" }, "Receta") : null),
+      el("span", { class: "precio" }, pesos.format(f.precio)),
+      el("span", { class: "detalle" }, f.producto + (ahorro ? " · " + ahorro : "")),
+      el("span", { class: "unidad" }, f.precio_unidad ? pesos.format(f.precio_unidad) + " c/u" : ""),
+      f.cadena === "Salcobrand" && f.precio_lista && f.precio_lista !== f.precio
+        ? el("span", { class: "detalle enlocal" }, "En el local: " + pesos.format(f.precio_lista)) : null);
+
     for (const g of orden) {
       const m = g[0];
-      // el ahorro se mide contra la siguiente opcion mas barata de OTRA cadena,
-      // no contra la mas cara (que suele ser una marca y exagera la diferencia)
-      const siguiente = g.find((f) => f.cadena !== m.cadena && f.precio > m.precio);
+      // genericos primero; las marcas van aparte y plegadas, porque mezclarlas
+      // hace parecer que la diferencia de precio es entre farmacias
+      const marcas = g.filter((f) => f.tipo === "marca");
+      const genericos = marcas.length < g.length ? g.filter((f) => f.tipo !== "marca") : [];
+      const principales = genericos.length ? genericos : g;
+      const mejor = principales[0];
+      // el ahorro se mide contra la siguiente opcion mas barata de OTRA cadena
+      const siguiente = principales.find((f) => f.cadena !== mejor.cadena && f.precio > mejor.precio);
       const tarjeta = el("div", { class: "grupo" },
-        el("h3", {}, m.principio_activo + " " + (m.mg < 1 ? Math.round(m.mg * 1000) + " mcg" : Number(m.mg) + " mg") + " · " + m.unidades + " comprimidos"));
-      g.forEach((f, i) => {
-        const ahorro = i === 0 && siguiente
-          ? "Ahorras " + pesos.format(siguiente.precio - f.precio) + " frente a " + siguiente.cadena : null;
-        tarjeta.append(el("button", {
-          class: "cadena" + (i === 0 ? " barata" : ""), type: "button", "data-cadena": f.cadena,
-          title: "Ver locales de " + f.cadena + " en el mapa",
-          onclick: () => elegirCadena(f.cadena),
-        },
-          el("span", { class: "nombre" },
-            el("span", { class: "punto", style: "background:" + (COLORES[f.cadena] || GRIS) }),
-            f.cadena, i === 0 && g.length > 1 ? el("span", { class: "etiqueta" }, "Más barato") : null),
-          el("span", { class: "precio" }, pesos.format(f.precio)),
-          el("span", { class: "detalle" }, f.producto + (ahorro ? " · " + ahorro : "")),
-          el("span", { class: "unidad" }, pesos.format(f.precio_unidad) + " c/u")));
-      });
+        el("h3", {}, m.principio_activo + " " + (m.mg < 1 ? Math.round(m.mg * 1000) + " mcg" : Number(m.mg) + " mg") + " · " + m.unidades + (m.forma === "liberacion prolongada" ? " comprimidos de liberación prolongada" : " comprimidos o cápsulas")));
+      if (new Set(g.map((f) => f.cadena)).size === 1)
+        tarjeta.append(el("p", { class: "unica" }, "Solo lo encontramos en " + m.cadena + "."));
+      if (genericos.length) tarjeta.append(el("p", { class: "subtitulo" }, "Genéricos"));
+      principales.forEach((f, i) => tarjeta.append(fila(f, i === 0 && principales.length > 1,
+        i === 0 && siguiente ? "Ahorras " + pesos.format(siguiente.precio - f.precio) + " frente a " + siguiente.cadena : null)));
+      if (genericos.length && marcas.length) {
+        const veces = marcas[marcas.length - 1].precio / mejor.precio;
+        tarjeta.append(el("details", { class: "marcas" },
+          el("summary", {}, "Marcas (" + marcas.length + ") · desde " + pesos.format(marcas[0].precio)
+            + (veces >= 2 ? " · hasta " + Math.round(veces) + " veces el genérico" : "")),
+          ...marcas.map((f) => fila(f, false, null))));
+      }
+      tarjeta.append(el("button", { class: "reportar", type: "button", onclick: () => abrirReporte(g) },
+        "¿Viste otro precio o no había? Avísanos"));
       caja.append(tarjeta);
+    }
+
+    // lo que no entra al comparador (jarabes, gotas, combinados, otras presentaciones)
+    if (otros.length) {
+      caja.append(el("details", { class: "grupo otros", ...(filas.length ? {} : { open: "" }) },
+        el("summary", {}, "Otras presentaciones y productos (" + otros.length + ")"),
+        ...otros.map((f) => fila(f, false, null)),
+        el("button", { class: "reportar", type: "button", onclick: () => abrirReporte(otros) },
+          "¿Viste otro precio o no había? Avísanos")));
     }
     marcarCadena();
   }
+
+  // ---------- reportes de usuarios ----------
+
+  function abrirReporte(productos) {
+    const d = $("reporte");
+    $("rProducto").replaceChildren(...productos.map((f) =>
+      el("option", { value: f.producto_id }, f.cadena + " · " + f.producto + " · " + pesos.format(f.precio))));
+    $("rEstado").textContent = "";
+    $("rForm").reset();
+    $("rPrecioCampo").hidden = false;
+    d.showModal();
+  }
+
+  $("rTipo").addEventListener("change", () => { $("rPrecioCampo").hidden = $("rTipo").value !== "precio_distinto"; });
+  $("rCancelar").addEventListener("click", () => $("reporte").close());
+  $("rForm").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const tipo = $("rTipo").value;
+    const precio = parseInt($("rPrecio").value.replace(/[^0-9]/g, ""), 10);
+    if (tipo === "precio_distinto" && !(precio > 0)) { $("rEstado").textContent = "Escribe el precio que viste."; return; }
+    $("rEnviar").disabled = true;
+    try {
+      await api("rpc/reportar", {
+        p_producto_id: Number($("rProducto").value), p_tipo: tipo,
+        p_precio: tipo === "precio_distinto" ? precio : null,
+        p_comentario: $("rComentario").value.slice(0, 300) || null,
+      });
+      $("rEstado").textContent = "¡Gracias! Lo revisaremos para corregir el precio.";
+      setTimeout(() => $("reporte").close(), 1600);
+    } catch (err) {
+      $("rEstado").textContent = "No pudimos guardar el reporte. Intenta de nuevo en un minuto.";
+    } finally { $("rEnviar").disabled = false; }
+  });
 
   function marcarCadena() {
     document.querySelectorAll(".cadena").forEach((b) => b.classList.toggle("activa", b.dataset.cadena === estado.cadena));

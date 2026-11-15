@@ -125,3 +125,28 @@ main { position: relative; min-height: 0; }
   .lema, #pista { display: none; }
   h1 { font-size: 1.3rem; }
 }
+
+.subtitulo { margin: 0; padding: 6px 12px 4px; font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: var(--suave); border-top: 1px solid var(--borde); }
+.subtitulo + .cadena { border-top: 0; }
+.etiqueta.bioeq { background: #fff; color: var(--acento); box-shadow: inset 0 0 0 1px var(--acento); }
+.etiqueta.receta { background: #fff; color: #7c2d12; box-shadow: inset 0 0 0 1px #c2410c; }
+.cadena .nombre { flex-wrap: wrap; }
+.marcas { border-top: 1px solid var(--borde); }
+.marcas summary { padding: 10px 12px; font-size: 0.88rem; font-weight: 600; color: var(--suave); cursor: pointer; }
+.marcas summary:hover { background: var(--fondo); }
+.marcas summary:focus-visible { outline: 3px solid color-mix(in srgb, var(--acento) 45%, transparent); outline-offset: -3px; }
+.fecha { margin: -4px 0 10px; font-size: 0.82rem; color: var(--suave); }
+
+.unica { margin: 0; padding: 6px 12px; font-size: 0.82rem; color: var(--turno); background: var(--turno-fondo); }
+.cadena .enlocal { grid-column: 1 / -1; }
+.reportar { width: 100%; padding: 9px 12px; border-top: 1px solid var(--borde); border-radius: 0; background: #fff; color: var(--acento); font-size: 0.85rem; font-weight: 600; text-align: left; }
+.reportar:hover { background: var(--fondo); filter: none; }
+.otros summary { padding: 10px 12px; font-size: 0.98rem; font-weight: 700; background: var(--fondo); cursor: pointer; }
+dialog { width: min(420px, calc(100vw - 32px)); border: 0; border-radius: 12px; padding: 20px; box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3); color: var(--texto); }
+dialog::backdrop { background: rgba(0, 0, 0, 0.45); }
+dialog h2 { font-size: 1.15rem; text-transform: none; letter-spacing: 0; color: var(--texto); margin-bottom: 2px; }
+dialog label { display: block; font-size: 0.85rem; font-weight: 600; margin: 12px 0 4px; }
+dialog select, dialog input, dialog textarea { width: 100%; padding: 10px; border: 1px solid var(--borde); border-radius: 8px; font: inherit; background: #fff; color: inherit; }
+dialog .fila { margin-top: 14px; justify-content: flex-end; }
+#rEstado { min-height: 1.3em; margin: 10px 0 0; font-size: 0.9rem; color: var(--acento); }
+button.secundario { background: #fff; color: var(--texto); box-shadow: inset 0 0 0 1px var(--borde); }
