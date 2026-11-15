@@ -2,7 +2,8 @@
   const cfg = window.APP_CONFIG || {};
   const $ = (id) => document.getElementById(id);
   const pesos = new Intl.NumberFormat("es-CL", { style: "currency", currency: "CLP", maximumFractionDigits: 0 });
-  const COLORES = { "Cruz Verde": "#1a8f4c", "Ahumada": "#d6322c", "Salcobrand": "#1463b8", "Dr. Simi": "#7c3aed" };
+  const COLORES = { "Cruz Verde": "#1a8f4c", "Ahumada": "#d6322c", "Salcobrand": "#1463b8", "Dr. Simi": "#7c3aed",
+    "EcoFarmacias": "#0891b2", "Farmex": "#ea580c", "El Químico": "#be185d" };
   const GRIS = "#6b7280";
   const SANTIAGO = [-33.4489, -70.6693];
 
@@ -174,7 +175,7 @@
       // no contra la mas cara (que suele ser una marca y exagera la diferencia)
       const siguiente = g.find((f) => f.cadena !== m.cadena && f.precio > m.precio);
       const tarjeta = el("div", { class: "grupo" },
-        el("h3", {}, m.principio_activo + " " + Number(m.mg) + " mg · " + m.unidades + " comprimidos"));
+        el("h3", {}, m.principio_activo + " " + (m.mg < 1 ? Math.round(m.mg * 1000) + " mcg" : Number(m.mg) + " mg") + " · " + m.unidades + " comprimidos"));
       g.forEach((f, i) => {
         const ahorro = i === 0 && siguiente
           ? "Ahorras " + pesos.format(siguiente.precio - f.precio) + " frente a " + siguiente.cadena : null;
