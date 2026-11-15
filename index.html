@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Farmaps</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div id="app">
+    <aside id="panel">
+      <header>
+        <h1 id="marca">Farmaps</h1>
+        <p class="lema">El precio más bajo y la farmacia más cercana.</p>
+      </header>
+
+      <form id="buscador" autocomplete="off">
+        <label for="q">Medicamento</label>
+        <div class="fila">
+          <input id="q" name="q" list="sugerencias" placeholder="Ej: paracetamol" required>
+          <button type="submit">Buscar</button>
+        </div>
+        <datalist id="sugerencias"></datalist>
+      </form>
+
+      <label class="interruptor">
+        <input type="checkbox" id="soloTurno">
+        <span>Solo farmacias de turno ahora</span>
+      </label>
+
+      <p id="aviso" class="aviso" hidden></p>
+      <section id="resultados" aria-live="polite"></section>
+      <section id="locales" aria-live="polite"></section>
+
+      <footer>
+        Precios web de cada cadena; en el local pueden variar. Turnos: MINSAL.
+      </footer>
+    </aside>
+
+    <main>
+      <div id="mapa" aria-label="Mapa de farmacias"></div>
+      <button id="ubicarme" type="button">Usar mi ubicación</button>
+      <p id="pista">Toca el mapa para fijar otro punto de partida.</p>
+    </main>
+  </div>
+
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="config.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
