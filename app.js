@@ -7,7 +7,9 @@
   const GRIS = "#6b7280";
   const SANTIAGO = [-33.4489, -70.6693];
 
-  const estado = { pos: null, posEsReal: false, cadena: null, capa: null, yo: null };
+  const estado = { pos: null, posEsReal: false, cadena: null, capa: null, yo: null,
+                   cercanas: new Map(), datos: null };
+  const RADIO_CERCA = 5000;  // metros: hasta aqui un local cuenta como "cerca"
 
   document.title = cfg.NOMBRE || "Farmaps";
   // marca en dos tonos, como el "Farma|gül" original
@@ -51,7 +53,10 @@
   const distancia = (m) => (m < 1000 ? Math.round(m / 10) * 10 + " m" : (m / 1000).toFixed(1).replace(".", ",") + " km");
   const hora = (iso) => new Date(iso).toLocaleTimeString("es-CL", { hour: "2-digit", minute: "2-digit", hour12: false });
   const haceDias = (n) => new Date(Date.now() - n * 864e5).toISOString().slice(0, 10);
-  const comoLlegar = (l) => "https://www.google.com/maps/dir/?api=1&destination=" + l.latitud + "," + l.longitud;
+  // abre la ruta desde donde esta la persona; a pie si queda a menos de 1,5 km
+  const comoLlegar = (l) => "https://www.google.com/maps/dir/?api=1&destination=" + l.latitud + "," + l.longitud
+    + (estado.posEsReal ? "&origin=" + estado.pos[0] + "," + estado.pos[1] : "")
+    + (l.distancia_m != null && l.distancia_m < 1500 ? "&travelmode=walking" : "");
 
   // ---------- mapa ----------
 
@@ -71,6 +76,16 @@
       radius: 8, color: "#fff", weight: 3, fillColor: "#2563eb", fillOpacity: 1,
     }).addTo(mapa).bindTooltip(real ? "Tu ubicación" : "Punto de partida");
     cargarLocales();
+    cargarCercanas();
+  }
+
+  // el local mas cercano de cada cadena, para mostrar distancia y ruta en cada precio
+  async function cargarCercanas() {
+    try {
+      const filas = await api("rpc/cadenas_cercanas", { lat: estado.pos[0], lng: estado.pos[1] });
+      estado.cercanas = new Map(filas.map((f) => [f.cadena, f]));
+    } catch (e) { estado.cercanas = new Map(); }
+    pintarResultados();
   }
 
   function ubicarme() {
@@ -161,13 +176,36 @@
       ]);
     } catch (e) { caja.replaceChildren(); return aviso(e.message); }
 
+    estado.datos = { q, filas, otros };
+    pintarResultados();
+  }
+
+  function pintarResultados() {
+    if (!estado.datos) return;
+    const { q } = estado.datos;
+    const caja = $("resultados");
+    const soloCerca = $("soloLocal").checked;
+    const local = (f) => estado.cercanas.get(f.cadena);
+    const cerca = (f) => { const l = local(f); return l && l.distancia_m <= RADIO_CERCA; };
+    const filtrar = (lista) => (soloCerca ? lista.filter(cerca) : lista);
+    const filas = filtrar(estado.datos.filas);
+    const otros = filtrar(estado.datos.otros);
+    const ocultas = estado.datos.filas.length + estado.datos.otros.length - filas.length - otros.length;
+
     caja.replaceChildren(el("h2", {}, "Precios"));
-    if (filas.length || otros.length) {
-      const ultima = filas.concat(otros).reduce((a, f) => (f.fecha > a ? f.fecha : a), "");
-      caja.append(el("p", { class: "fecha" }, "Precios web revisados el " + ultima.split("-").reverse().join("-") + "."));
+    if (!estado.datos.filas.length && !estado.datos.otros.length) {
+      caja.append(el("p", { class: "vacio" }, "Aún no tenemos precios para “" + q + "”. Prueba con el principio activo (por ejemplo, losartán en vez de la marca)."));
+      return;
+    }
+    const ultima = estado.datos.filas.concat(estado.datos.otros).reduce((a, f) => (f.fecha > a ? f.fecha : a), "");
+    caja.append(el("p", { class: "fecha" }, "Precios web revisados el " + ultima.split("-").reverse().join("-") + "."));
+    if (ocultas) {
+      caja.append(el("p", { class: "ocultas" },
+        "Ocultamos " + ocultas + (ocultas === 1 ? " opción" : " opciones") + " sin local a menos de 5 km. ",
+        el("a", { href: "#", onclick: (e) => { e.preventDefault(); $("soloLocal").checked = false; pintarResultados(); } }, "Mostrar todas")));
     }
     if (!filas.length && !otros.length) {
-      caja.append(el("p", { class: "vacio" }, "Aún no tenemos precios para “" + q + "”. Prueba con el principio activo (por ejemplo, losartán en vez de la marca)."));
+      caja.append(el("p", { class: "vacio" }, "Ninguna farmacia con local cerca lo tiene. Mira todas las opciones para comprar por internet."));
       return;
     }
 
@@ -179,22 +217,35 @@
     const orden = [...grupos.values()].sort((a, b) =>
       new Set(b.map((x) => x.cadena)).size - new Set(a.map((x) => x.cadena)).size || a[0].mg - b[0].mg || a[0].unidades - b[0].unidades);
 
-    const fila = (f, destacada, ahorro) => el("button", {
-      class: "cadena" + (destacada ? " barata" : ""), type: "button", "data-cadena": f.cadena,
-      title: "Ver locales de " + f.cadena + " en el mapa",
-      onclick: () => elegirCadena(f.cadena),
-    },
-      el("span", { class: "nombre" },
-        el("span", { class: "punto", style: "background:" + (COLORES[f.cadena] || GRIS) }),
-        f.cadena,
-        destacada ? el("span", { class: "etiqueta" }, "Más barato") : null,
-        f.bioequivalente ? el("span", { class: "etiqueta bioeq", title: "Bioequivalente según la farmacia" }, "Bioequivalente") : null,
-        f.receta ? el("span", { class: "etiqueta receta", title: "Requiere receta médica" }, "Receta") : null),
-      el("span", { class: "precio" }, pesos.format(f.precio)),
-      el("span", { class: "detalle" }, f.producto + (ahorro ? " · " + ahorro : "")),
-      el("span", { class: "unidad" }, f.precio_unidad ? pesos.format(f.precio_unidad) + " c/u" : ""),
-      f.cadena === "Salcobrand" && f.precio_lista && f.precio_lista !== f.precio
-        ? el("span", { class: "detalle enlocal" }, "En el local: " + pesos.format(f.precio_lista)) : null);
+    // cada opcion: el precio (al tocarlo, sus locales en el mapa) y debajo el local mas cercano con su ruta
+    const fila = (f, destacada, ahorro) => {
+      const l = local(f);
+      return el("div", { class: "opcion" + (destacada ? " barata" : "") },
+        el("button", {
+          class: "cadena", type: "button", "data-cadena": f.cadena,
+          title: "Ver locales de " + f.cadena + " en el mapa",
+          onclick: () => elegirCadena(f.cadena),
+        },
+          el("span", { class: "nombre" },
+            el("span", { class: "punto", style: "background:" + (COLORES[f.cadena] || GRIS) }),
+            f.cadena,
+            destacada ? el("span", { class: "etiqueta" }, "Más barato") : null,
+            f.bioequivalente ? el("span", { class: "etiqueta bioeq", title: "Bioequivalente según la farmacia" }, "Bioequivalente") : null,
+            f.receta ? el("span", { class: "etiqueta receta", title: "Requiere receta médica" }, "Receta") : null),
+          el("span", { class: "precio" }, pesos.format(f.precio)),
+          el("span", { class: "detalle" }, f.producto + (ahorro ? " · " + ahorro : "")),
+          el("span", { class: "unidad" }, f.precio_unidad ? pesos.format(f.precio_unidad) + " c/u" : ""),
+          f.cadena === "Salcobrand" && f.precio_lista && f.precio_lista !== f.precio
+            ? el("span", { class: "detalle enlocal" }, "En el local: " + pesos.format(f.precio_lista)) : null),
+        l && l.distancia_m <= RADIO_CERCA
+          ? el("div", { class: "cerca" },
+              el("span", {}, "A " + distancia(l.distancia_m) + " · " + l.direccion),
+              el("a", { class: "ir", href: comoLlegar(l), target: "_blank", rel: "noopener" }, "Cómo llegar"))
+          : el("div", { class: "cerca lejos" },
+              l ? "El local más cercano está a " + distancia(l.distancia_m) + "."
+                : "Sin locales en nuestro mapa: puede ser solo venta por internet.",
+              f.url ? el("a", { class: "ir", href: f.url, target: "_blank", rel: "noopener" }, "Ver en su sitio") : null));
+    };
 
     for (const g of orden) {
       const m = g[0];
@@ -209,7 +260,7 @@
       const tarjeta = el("div", { class: "grupo" },
         el("h3", {}, m.principio_activo + " " + (m.mg < 1 ? Math.round(m.mg * 1000) + " mcg" : Number(m.mg) + " mg") + " · " + m.unidades + (m.forma === "liberacion prolongada" ? " comprimidos de liberación prolongada" : " comprimidos o cápsulas")));
       if (new Set(g.map((f) => f.cadena)).size === 1)
-        tarjeta.append(el("p", { class: "unica" }, "Solo lo encontramos en " + m.cadena + "."));
+        tarjeta.append(el("p", { class: "unica" }, "Solo lo encontramos en " + m.cadena + (soloCerca ? " cerca de ti." : ".")));
       if (genericos.length) tarjeta.append(el("p", { class: "subtitulo" }, "Genéricos"));
       principales.forEach((f, i) => tarjeta.append(fila(f, i === 0 && principales.length > 1,
         i === 0 && siguiente ? "Ahorras " + pesos.format(siguiente.precio - f.precio) + " frente a " + siguiente.cadena : null)));
@@ -285,6 +336,7 @@
     if (q) { estado.cadena = null; buscar(q); cargarLocales(); }
   });
   $("soloTurno").addEventListener("change", cargarLocales);
+  $("soloLocal").addEventListener("change", pintarResultados);
 
   // ---------- inicio ----------
 

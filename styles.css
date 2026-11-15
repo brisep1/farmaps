@@ -150,3 +150,16 @@ dialog select, dialog input, dialog textarea { width: 100%; padding: 10px; borde
 dialog .fila { margin-top: 14px; justify-content: flex-end; }
 #rEstado { min-height: 1.3em; margin: 10px 0 0; font-size: 0.9rem; color: var(--acento); }
 button.secundario { background: #fff; color: var(--texto); box-shadow: inset 0 0 0 1px var(--borde); }
+
+#soloLocal { accent-color: var(--acento); }
+.opcion { border-top: 1px solid var(--borde); background: #fff; }
+.opcion.barata { background: var(--barato-fondo); }
+.opcion .cadena { border-top: 0; background: transparent; padding-bottom: 4px; }
+.opcion .cadena:hover { background: rgba(0, 0, 0, 0.04); }
+.subtitulo + .opcion { border-top: 0; }
+.cerca { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 2px 12px 10px 30px; font-size: 0.82rem; color: var(--texto); }
+.cerca.lejos { color: var(--suave); }
+.cerca .ir { flex: none; padding: 6px 12px; border-radius: 99px; background: var(--acento); color: #fff; text-decoration: none; font-size: 0.82rem; }
+.cerca.lejos .ir { background: #fff; color: var(--acento); box-shadow: inset 0 0 0 1px var(--acento); }
+.cerca .ir:focus-visible { outline: 3px solid color-mix(in srgb, var(--acento) 45%, transparent); outline-offset: 2px; }
+.ocultas { margin: -4px 0 10px; font-size: 0.85rem; color: var(--suave); }
