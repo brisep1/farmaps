@@ -32,6 +32,11 @@ body {
 }
 
 h1 { margin: 0; font-size: 1.6rem; letter-spacing: -0.02em; color: var(--acento); }
+.marca { display: flex; align-items: center; gap: 8px; }
+.marca img { flex: none; }
+h1 { font-family: Georgia, "Times New Roman", serif; }
+h1 span { color: #c8202f; }
+.origen { display: block; margin-top: 2px; font-style: italic; }
 .lema { margin: 2px 0 0; color: var(--suave); font-size: 0.92rem; }
 
 #buscador label { display: block; font-size: 0.85rem; font-weight: 600; margin-bottom: 6px; }

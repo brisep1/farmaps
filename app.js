@@ -9,7 +9,10 @@
   const estado = { pos: null, posEsReal: false, cadena: null, capa: null, yo: null };
 
   document.title = cfg.NOMBRE || "Farmaps";
-  $("marca").textContent = cfg.NOMBRE || "Farmaps";
+  // marca en dos tonos, como el "Farma|gül" original
+  const nombre = cfg.NOMBRE || "Farmaps";
+  const corte = nombre.startsWith("Farma") && nombre.length > 5 ? 5 : nombre.length;
+  $("marca").replaceChildren(nombre.slice(0, corte), Object.assign(document.createElement("span"), { textContent: nombre.slice(corte) }));
 
   // ---------- utilidades ----------
 

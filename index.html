@@ -4,6 +4,8 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Farmaps</title>
+  <link rel="icon" href="icon.svg" type="image/svg+xml">
+  <meta name="theme-color" content="#0b6e4f">
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
   <link rel="stylesheet" href="styles.css">
 </head>
@@ -11,7 +13,7 @@
   <div id="app">
     <aside id="panel">
       <header>
-        <h1 id="marca">Farmaps</h1>
+        <div class="marca"><img src="icon.svg" alt="" width="40" height="40"><h1 id="marca">Farmaps</h1></div>
         <p class="lema">El precio más bajo y la farmacia más cercana.</p>
       </header>
 
@@ -35,6 +37,7 @@
 
       <footer>
         Precios web de cada cadena; en el local pueden variar. Turnos: MINSAL.
+        <span class="origen">Nació como Farmagül, 2015.</span>
       </footer>
     </aside>
 
