@@ -167,11 +167,14 @@
 
     for (const g of orden) {
       const m = g[0];
-      const caro = g[g.length - 1].precio;
+      // el ahorro se mide contra la siguiente opcion mas barata de OTRA cadena,
+      // no contra la mas cara (que suele ser una marca y exagera la diferencia)
+      const siguiente = g.find((f) => f.cadena !== m.cadena && f.precio > m.precio);
       const tarjeta = el("div", { class: "grupo" },
         el("h3", {}, m.principio_activo + " " + Number(m.mg) + " mg · " + m.unidades + " comprimidos"));
       g.forEach((f, i) => {
-        const ahorro = i === 0 && caro > f.precio ? "Ahorras " + pesos.format(caro - f.precio) : null;
+        const ahorro = i === 0 && siguiente
+          ? "Ahorras " + pesos.format(siguiente.precio - f.precio) + " frente a " + siguiente.cadena : null;
         tarjeta.append(el("button", {
           class: "cadena" + (i === 0 ? " barata" : ""), type: "button", "data-cadena": f.cadena,
           title: "Ver locales de " + f.cadena + " en el mapa",
