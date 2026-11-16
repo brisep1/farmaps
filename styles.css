@@ -59,7 +59,8 @@ button {
 button:hover { filter: brightness(1.08); }
 
 .interruptor { display: flex; align-items: center; gap: 10px; font-size: 0.95rem; cursor: pointer; }
-.interruptor input { width: 18px; height: 18px; accent-color: var(--turno); }
+.interruptor { min-height: 32px; }
+.interruptor input { width: 22px; height: 22px; flex: none; accent-color: var(--acento); }
 
 .aviso {
   margin: 0; padding: 10px 12px; border-radius: 8px;
@@ -119,7 +120,11 @@ main { position: relative; min-height: 0; }
 .leaflet-popup-content strong { display: block; }
 
 @media (max-width: 760px) {
-  #app { grid-template-columns: 1fr; grid-template-rows: 42vh 1fr; }
+  #app { grid-template-columns: 1fr; grid-template-rows: 30vh 1fr; }
+  #panel { gap: 10px; }
+  .marca img { width: 28px; height: 28px; }
+  .leaflet-touch .leaflet-bar a { width: 40px; height: 40px; line-height: 40px; }
+  #ubicarme { padding: 8px 12px; font-size: 0.9rem; }
   main { grid-row: 1; }
   #panel { grid-row: 2; border-right: 0; border-top: 1px solid var(--borde); padding: 16px; }
   .lema, #pista { display: none; }
@@ -165,3 +170,40 @@ button.secundario { background: #fff; color: var(--texto); box-shadow: inset 0 0
 .ocultas { margin: -4px 0 10px; font-size: 0.85rem; color: var(--suave); }
 
 h2 .quitar { margin-left: 10px; font-size: 0.8rem; font-weight: 400; color: var(--acento); }
+
+/* --- auditoria visual y de uso --- */
+button.enlace { padding: 6px 0; min-height: 32px; background: none; color: var(--acento); font-weight: 600; text-decoration: underline; border-radius: 4px; font-size: inherit; text-transform: none; letter-spacing: 0; }
+button.enlace:hover { filter: none; text-decoration-thickness: 2px; }
+.donde { margin: 0; font-size: 0.86rem; color: var(--suave); }
+.nota { margin: 0 0 10px; padding: 8px 12px; border-radius: 8px; background: var(--fondo); font-size: 0.88rem; }
+.nota.noche { background: var(--turno-fondo); color: #7c2d12; }
+.sugeridos { margin: 6px 0 0; font-size: 0.95rem; }
+.fichas { display: flex; flex-wrap: wrap; gap: 8px; margin: 0 0 12px; }
+.ficha { padding: 9px 14px; min-height: 40px; border-radius: 99px; background: #fff; color: var(--texto); box-shadow: inset 0 0 0 1px var(--borde); font-size: 0.9rem; font-weight: 600; }
+.ficha.activa { background: var(--acento); color: #fff; box-shadow: none; }
+.ficha:hover { filter: none; box-shadow: inset 0 0 0 1px var(--acento); }
+.grupo h3 { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 8px; }
+.etiqueta { font-size: 0.72rem; }
+.cadena .detalle, .cadena .unidad { font-size: 0.86rem; }
+div.cadena { cursor: default; }
+.opcion .cadena:hover { background: transparent; }
+.opcion:has(.cadena.activa) { box-shadow: inset 4px 0 0 var(--acento); }
+.cadena.activa { box-shadow: none; }
+.cerca { flex-wrap: wrap; padding-left: 12px; font-size: 0.86rem; }
+.cerca .donde-local { flex: 1 1 150px; min-width: 0; }
+.cerca .botones { display: flex; gap: 8px; flex: none; margin-left: auto; }
+.cerca .ir { display: inline-flex; align-items: center; min-height: 40px; padding: 8px 14px; font-size: 0.88rem; font-weight: 600; }
+.cerca .ir.secundaria { background: #fff; color: var(--acento); box-shadow: inset 0 0 0 1px var(--acento); }
+.cerca .cerrado { color: var(--turno); font-weight: 600; }
+.cerca .etiqueta.turno { margin-right: 4px; }
+.local .acciones { gap: 18px; align-items: center; }
+.local .acciones a { display: inline-flex; align-items: center; min-height: 40px; }
+h2 .quitar { margin-left: 10px; font-size: 0.85rem; }
+.ocultas button.enlace { font-size: inherit; }
+dialog select { text-overflow: ellipsis; }
+
+@media (max-width: 760px) {
+  #ubicarme { display: none; }  /* en celular el enlace del panel hace lo mismo y no tapa el mapa */
+  .nota, .ocultas, .fecha { font-size: 0.82rem; }
+  .fichas { scroll-margin-top: 8px; }
+}
