@@ -107,21 +107,32 @@
 
   async function cargarLocales() {
     if (!estado.pos) return;
-    const soloTurno = $("soloTurno").checked;
-    let locales;
+    let soloTurno = $("soloTurno").checked;
+    const pedir = (turno) => api("rpc/locales_cercanos", {
+      lat: estado.pos[0], lng: estado.pos[1],
+      cadenas: estado.cadena ? [estado.cadena] : null,
+      solo_turno: turno, limite: 25,
+    });
+    let locales, sinTurnoCerca = false;
     try {
-      locales = await api("rpc/locales_cercanos", {
-        lat: estado.pos[0], lng: estado.pos[1],
-        cadenas: estado.cadena ? [estado.cadena] : null,
-        solo_turno: soloTurno, limite: 25,
-      });
+      locales = await pedir(soloTurno);
+      // elegiste una cadena y su local de turno mas cercano queda lejos (o no hay):
+      // mejor mostrar sus locales cercanos que mandar el mapa a otra ciudad
+      if (soloTurno && estado.cadena && (!locales.length || locales[0].distancia_m > RADIO_CERCA)) {
+        const todos = await pedir(false);
+        if (todos.length) { locales = todos; soloTurno = false; sinTurnoCerca = true; }
+      }
     } catch (e) { return aviso(e.message); }
 
     estado.capa.clearLayers();
     const caja = $("locales");
     caja.replaceChildren();
     const titulo = (soloTurno ? "De turno ahora" : "Farmacias cercanas") + (estado.cadena ? " · " + estado.cadena : "");
-    caja.append(el("h2", {}, titulo));
+    caja.append(el("h2", {}, titulo,
+      estado.cadena ? el("a", { class: "quitar", href: "#", onclick: (ev) => { ev.preventDefault(); estado.cadena = null; marcarCadena(); cargarLocales(); } }, "Ver todas las cadenas") : null));
+
+    if (sinTurnoCerca)
+      caja.append(el("p", { class: "vacio" }, "Ningún local de " + estado.cadena + " está de turno cerca. Estos son sus locales más cercanos: revisa el horario antes de ir."));
 
     if (!locales.length) {
       caja.append(el("p", { class: "vacio" },
@@ -131,7 +142,11 @@
       return;
     }
 
+    // con una cadena elegida, el mapa se acerca a su local mas cercano y a ti;
+    // sin cadena, muestra los cinco locales mas cercanos
     const limites = [estado.pos];
+    const enfoque = estado.cadena ? 1 : 5;
+    let primero = null;
     locales.forEach((l, i) => {
       const color = COLORES[l.cadena] || GRIS;
       const marcador = L.circleMarker([l.latitud, l.longitud], {
@@ -144,7 +159,8 @@
         l.de_turno ? el("span", {}, "De turno hasta las " + hora(l.turno_fin)) : null,
         l.de_turno ? el("br") : null,
         el("a", { href: comoLlegar(l), target: "_blank", rel: "noopener" }, "Cómo llegar")));
-      if (i < 5) limites.push([l.latitud, l.longitud]);
+      if (i < enfoque) limites.push([l.latitud, l.longitud]);
+      if (i === 0) primero = marcador;
 
       if (i < 8) {
         caja.append(el("div", { class: "local" },
@@ -159,7 +175,9 @@
             el("a", { href: "#", onclick: (ev) => { ev.preventDefault(); mapa.setView([l.latitud, l.longitud], 16); marcador.openPopup(); } }, "Ver en el mapa"))));
       }
     });
-    mapa.fitBounds(limites, { padding: [50, 50], maxZoom: 16 });
+    mapa.invalidateSize();
+    mapa.fitBounds(limites, { padding: [60, 60], maxZoom: 17, animate: false });
+    if (estado.cadena && primero) primero.openPopup();
   }
 
   // ---------- busqueda y comparacion ----------
@@ -325,9 +343,10 @@
   }
 
   function elegirCadena(cadena) {
-    estado.cadena = estado.cadena === cadena ? null : cadena;  // segundo clic quita el filtro
+    estado.cadena = cadena;  // el filtro se quita con "Ver todas las cadenas"
     marcarCadena();
     cargarLocales();
+    $("mapa").scrollIntoView({ behavior: "smooth", block: "nearest" });
   }
 
   $("buscador").addEventListener("submit", (e) => {

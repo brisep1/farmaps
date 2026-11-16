@@ -163,3 +163,5 @@ button.secundario { background: #fff; color: var(--texto); box-shadow: inset 0 0
 .cerca.lejos .ir { background: #fff; color: var(--acento); box-shadow: inset 0 0 0 1px var(--acento); }
 .cerca .ir:focus-visible { outline: 3px solid color-mix(in srgb, var(--acento) 45%, transparent); outline-offset: 2px; }
 .ocultas { margin: -4px 0 10px; font-size: 0.85rem; color: var(--suave); }
+
+h2 .quitar { margin-left: 10px; font-size: 0.8rem; font-weight: 400; color: var(--acento); }
